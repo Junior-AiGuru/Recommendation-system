@@ -4,7 +4,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
 import numpy as np
 
+# ============================================================
 # Setup
+# ============================================================
 app = FastAPI()
 
 df = pd.read_excel("Places_Dataset.xlsx")
@@ -21,14 +23,13 @@ mlb = MultiLabelBinarizer(classes=[
 category_matrix = mlb.fit_transform(df["categories_list"])
 
 def clean(value):
-    # Avoid returning NaN or infinite values in the response
     if isinstance(value, float) and np.isnan(value):
         return None
     return value
 
-
-# Endpoint
-
+# ============================================================
+# Webhook Endpoint
+# ============================================================
 @app.post("/webhook")
 async def webhook(request: Request):
     body = await request.json()
@@ -36,15 +37,19 @@ async def webhook(request: Request):
     user_interests = body.get("user_interests", [])
     top_n = body.get("top_n", 300)
     pool_size = body.get("pool_size", 300)
+    city_filter = body.get("city_filter", None)
 
     if not user_interests:
-        raise HTTPException(status_code=400, detail="user_interests فاضلة")
+        raise HTTPException(status_code=400, detail="user_interests Required")
 
     user_vector = mlb.transform([user_interests])
     scores = cosine_similarity(user_vector, category_matrix).flatten()
 
     temp_df = df.copy()
     temp_df["similarity_score"] = scores
+
+    if city_filter:
+        temp_df = temp_df[temp_df["city_en"].str.lower() == city_filter.lower()]
 
     top_pool = temp_df[temp_df["similarity_score"] > 0]
     top_pool = top_pool.sort_values("similarity_score", ascending=False).head(pool_size)
