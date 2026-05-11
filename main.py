@@ -10,7 +10,7 @@ import numpy as np
 # ============================================================
 app = FastAPI()
 
-df = pd.read_excel("places_final.xlsx")
+df = pd.read_excel("Places_Dataset.xlsx")
 df["categories_list"] = df["categories"].apply(
     lambda x: [c.strip() for c in x.split("|")] if pd.notna(x) else []
 )
